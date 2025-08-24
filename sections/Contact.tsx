@@ -27,11 +27,11 @@ export default function Contact() {
       if (res.ok) {
         setStatus("success");
         form.reset();
-        setTimeout(() => setStatus(null), 3000); // hidden after 3 seconds
+        setTimeout(() => setStatus(null), 3000);
       } else {
         throw new Error("Errore invio");
       }
-    } catch (err) {
+    } catch {
       setStatus("error");
       setTimeout(() => setStatus(null), 3000);
     }
@@ -40,7 +40,7 @@ export default function Contact() {
   return (
     <section id="contatti" className="mx-auto max-w-7xl px-4 py-16 md:px-6">
       <div className="grid gap-6 md:grid-cols-2">
-        {/* map */}
+        {/* MAPPA */}
         <motion.div
           variants={fadeUp}
           initial="hidden"
@@ -48,16 +48,23 @@ export default function Contact() {
           viewport={{ once: true }}
           className="overflow-hidden rounded-2xl border border-white/10"
         >
+          {/* 
+            ارتفاعات متجاوبة:
+            - موبايل: h-64
+            - تابلت/لابتوب صغير: md:h-[420px]
+            - لابتوب/ديسكتوب: lg:h-[520px]
+          */}
           <iframe
             title="Mappa"
-            className="h-80 w-full"
+            className="w-full h-64 md:h-[420px] lg:h-[520px]"
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2792.3349985326063!2d9.224157576730118!3d45.534667330178936!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4786c5ef2e10b5d3%3A0x18e9ff9d64b0f3b!2sVia%20Giacomo%20Puccini%2C%2060%2C%2020099%20Sesto%20San%20Giovanni%20MI%2C%20Italia!5e0!3m2!1sit!2sit!4v1724500000000!5m2!1sit!2sit"
           />
         </motion.div>
 
-        {/*  contact + form */}
+        {/* CONTATTI + FORM */}
         <motion.div
           variants={fadeUp}
           initial="hidden"
@@ -75,7 +82,12 @@ export default function Contact() {
             </li>
             <li>
               💬{" "}
-              <a href="https://wa.me/393296895007" className="underline">
+              <a
+                href="https://wa.me/393296895007"
+                className="underline"
+                target="_blank"
+                rel="noopener"
+              >
                 WhatsApp
               </a>
             </li>
@@ -116,7 +128,7 @@ export default function Contact() {
             </button>
           </form>
 
-          {/*  sucess or error /  */}
+          {/* TOASTS */}
           {status === "success" && (
             <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-md bg-green-600 px-4 py-2 text-xl font-medium text-white shadow-lg">
               ✅ successo

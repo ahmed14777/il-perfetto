@@ -8,7 +8,8 @@ export type CompanyInfo = {
   email: string;
   phone: string;
   website?: string;
-  logoDataUrl?: string; // PNG/SVG كـ Base64 (optional)
+  logoDataUrl?: string; // Base64 (PNG/SVG)
+  iban?: string; // يظهر في التذييل إن وُجد
 };
 
 export type ClientInfo = {
@@ -26,6 +27,8 @@ export type QuoteInfo = {
   baseTotal: number;
   vat: number;
   total: number;
+  quoteNumber?: string;
+  validityDays?: number;
 };
 
 const BRAND = {
@@ -33,6 +36,7 @@ const BRAND = {
   rgb: [240, 120, 24] as [number, number, number],
 };
 const GREY = (n: number) => [n, n, n] as [number, number, number];
+const BRAND_SOFT = [255, 243, 234] as [number, number, number];
 
 function eur(n: number) {
   return new Intl.NumberFormat("it-IT", {
@@ -41,12 +45,9 @@ function eur(n: number) {
     maximumFractionDigits: 0,
   }).format(n);
 }
-
 function titleCase(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
-
-/**  triangle   */
 function rrect(
   doc: jsPDF,
   x: number,
@@ -58,11 +59,21 @@ function rrect(
 ) {
   (doc as any).roundedRect(x, y, w, h, r, r, style);
 }
-
-/** line */
 function line(doc: jsPDF, y: number, x1 = 40, x2 = 555) {
   doc.setDrawColor(230, 230, 230);
   doc.line(x1, y, x2, y);
+}
+function multiline(
+  doc: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight = 14
+) {
+  const lines = doc.splitTextToSize(text, maxWidth) as string[];
+  lines.forEach((ln, i) => doc.text(ln, x, y + i * lineHeight));
+  return y + (lines.length - 1) * lineHeight;
 }
 
 export function generateQuotePDF(
@@ -71,8 +82,12 @@ export function generateQuotePDF(
   quote: QuoteInfo
 ) {
   const doc = new jsPDF({ unit: "pt", compress: true });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const MARGIN_X = 40;
+  const BOTTOM_MARGIN = 40;
 
-  // meta data
+  // Meta
   doc.setProperties({
     title: `Preventivo ${company.name}`,
     subject: "Stima Preventivo",
@@ -81,177 +96,247 @@ export function generateQuotePDF(
   });
   const today = new Date();
   const dateStr = today.toLocaleDateString("it-IT");
+  const quoteNo =
+    quote.quoteNumber ||
+    `PF-${today.getFullYear()}${String(today.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(today.getDate()).padStart(2, "0")}`;
+  const validityDays = quote.validityDays ?? 14;
 
-  // logo
+  // Header band
   doc.setFillColor(...BRAND.rgb);
-  rrect(doc, 0, 0, 595, 110, 0, "F");
+  rrect(doc, 0, 0, pageW, 115, 0, "F");
 
-  // logo (optional)
+  // Logo (optional)
   if (company.logoDataUrl) {
     try {
       doc.addImage(
         company.logoDataUrl,
         "PNG",
-        40,
+        MARGIN_X,
         28,
         120,
         54,
         undefined,
         "FAST"
       );
-    } catch {
-      /* continue without logo */
-    }
+    } catch {}
   }
 
-  // campany details
+  // Company block
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text(company.name, 200, 45, { baseline: "middle" } as any);
+  doc.text(company.name, 200, 42);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`P.IVA ${company.piva}`, 200, 65);
-  doc.text(company.address, 200, 80);
+  doc.text(`P.IVA ${company.piva}`, 200, 60);
+  doc.text(company.address, 200, 74);
   const contactLine = [company.email, company.phone, company.website]
     .filter(Boolean)
     .join(" • ");
-  if (contactLine) doc.text(contactLine, 200, 95);
+  if (contactLine) doc.text(contactLine, 200, 88);
 
-  // title
-  doc.setTextColor(...GREY(30));
+  // Title + meta
+  doc.setTextColor(...GREY(20));
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("PREVENTIVO", 40, 150);
+  doc.setFontSize(22);
+  doc.text("PREVENTIVO", MARGIN_X, 150);
+  doc.setDrawColor(...BRAND.rgb);
+  doc.setLineWidth(1.2);
+  doc.line(MARGIN_X, 155, MARGIN_X + 140, 155);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(...GREY(110));
-  doc.text(`Data: ${dateStr}`, 40, 168);
+  doc.text(`Data: ${dateStr}`, MARGIN_X, 170);
+  doc.text(`N°: ${quoteNo}`, MARGIN_X + 80, 170);
+  doc.text(`Validità: ${validityDays} giorni`, MARGIN_X + 160, 170);
+  doc.setLineWidth(0.2);
 
-  // client card
-  const colW = 255;
-  const gap = 15;
-  const topCardsY = 195;
+  // Cards: Cliente + Dettagli
+  const colW = 255,
+    gap = 15,
+    topCardsY = 195;
 
-  //  "Dati Cliente"
+  // Dati Cliente
   doc.setDrawColor(230, 230, 230);
   doc.setFillColor(255, 255, 255);
-  rrect(doc, 40, topCardsY, colW, 120, 10, "DF");
+  rrect(doc, MARGIN_X, topCardsY, colW, 130, 10, "DF");
   doc.setTextColor(...GREY(30));
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("Dati Cliente", 55, topCardsY + 24);
+  doc.text("Dati Cliente", MARGIN_X + 15, topCardsY + 24);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.setTextColor(...GREY(60));
+  doc.setTextColor(...GREY(65));
   let y = topCardsY + 46;
-  doc.text(`Nome: ${client.name || "-"}`, 55, y);
+  doc.text(`Nome: ${client.name || "-"}`, MARGIN_X + 15, y);
   y += 16;
-  doc.text(`Email: ${client.email || "-"}`, 55, y);
+  doc.text(`Email: ${client.email || "-"}`, MARGIN_X + 15, y);
   y += 16;
-  doc.text(`Telefono: ${client.phone || "-"}`, 55, y);
+  doc.text(`Telefono: ${client.phone || "-"}`, MARGIN_X + 15, y);
   y += 16;
-  doc.text(`Città: ${client.city || "-"}`, 55, y);
+  doc.text(`Città: ${client.city || "-"}`, MARGIN_X + 15, y);
 
-  //  "Dettagli Lavoro"
-  rrect(doc, 40 + colW + gap, topCardsY, colW, 120, 10, "DF");
-  doc.setTextColor(...GREY(30));
+  // Dettagli Lavoro (أوضح)
+  rrect(doc, MARGIN_X + colW + gap, topCardsY, colW, 130, 10, "DF");
+  doc.setFillColor(...BRAND_SOFT);
+  rrect(doc, MARGIN_X + colW + gap, topCardsY, colW, 130, 10, "F");
+  const badgeX = MARGIN_X + colW + gap + 15,
+    badgeY = topCardsY + 16,
+    badgeH = 18,
+    badgeW = 118;
+  doc.setFillColor(...BRAND.rgb);
+  rrect(doc, badgeX, badgeY, badgeW, badgeH, 6, "F");
+  doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("Dettagli Lavoro", 55 + colW + gap, topCardsY + 24);
+  doc.setFontSize(10);
+  doc.text("Dettagli Lavoro", badgeX + 8, badgeY + 12);
+
+  doc.setTextColor(...GREY(25));
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.setTextColor(...GREY(60));
-  y = topCardsY + 46;
   const materialLabel = titleCase(quote.material);
   const finishLabel = quote.finish === "premium" ? "Premium" : "Standard";
-  doc.text(`Materiale: ${materialLabel}`, 55 + colW + gap, y);
-  y += 16;
-  doc.text(`Finitura: ${finishLabel}`, 55 + colW + gap, y);
-  y += 16;
-  doc.text(`Superficie: ${quote.mq} mq`, 55 + colW + gap, y);
-  y += 16;
-  doc.text(`Prezzo al mq: ${eur(quote.pricePerMq)}`, 55 + colW + gap, y);
-
-  // table Breakdown
-  const tableY = topCardsY + 150;
-  doc.setTextColor(...GREY(30));
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("Riepilogo costi", 40, tableY);
-
-  // table header
-  const rowH = 28;
-  const tableX = 40;
-  const tableW = 515;
-  const col1 = 0.6 * tableW; // الوصف
-  const col2 = 0.4 * tableW; // المبلغ
-
-  // table
-  doc.setFillColor(246, 246, 246);
-  rrect(doc, tableX, tableY + 12, tableW, rowH, 8, "F");
-  doc.setTextColor(...GREY(30));
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("Voce", tableX + 12, tableY + 12 + 18);
-  doc.text("Importo", tableX + col1 + 12, tableY + 12 + 18);
-
-  // data array
-  const rows: Array<[string, string]> = [
-    ["Posa base", eur(quote.baseTotal)],
-    ["IVA (22%)", eur(quote.vat)],
+  let ly = topCardsY + 46;
+  const bullets = [
+    `Materiale: ${materialLabel}`,
+    `Finitura: ${finishLabel}`,
+    `Superficie: ${quote.mq} mq`,
+    `Prezzo al mq: ${eur(quote.pricePerMq)}`,
   ];
-  let ry = tableY + 12 + rowH + 6;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(...GREY(70));
-  rows.forEach(([label, val], i) => {
-    // background
-    if (i % 2 === 0) {
-      doc.setFillColor(252, 252, 252);
-      rrect(doc, tableX, ry - 20, tableW, rowH, 6, "F");
-    }
-    doc.text(label, tableX + 12, ry);
-    doc.text(val, tableX + col1 + 12, ry, { align: "left" } as any);
-    ry += rowH;
+  bullets.forEach((b) => {
+    doc.setFillColor(...BRAND.rgb);
+    rrect(doc, MARGIN_X + colW + gap + 15, ly - 9, 6, 6, 2, "F");
+    doc.text(b, MARGIN_X + colW + gap + 15 + 12, ly);
+    ly += 16;
   });
 
-  //total
-  const totalBoxY = ry + 8;
-  doc.setFillColor(...BRAND.rgb);
-  doc.setTextColor(255, 255, 255);
-  rrect(doc, tableX, totalBoxY, tableW, 46, 10, "F");
+  // Descrizione lavoro
+  const descY = topCardsY + 160;
+  doc.setTextColor(...GREY(30));
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("TOTALE INDICATIVO", tableX + 12, totalBoxY + 30);
-  doc.setFontSize(14);
-  doc.text(eur(quote.total), tableX + col1 + 12, totalBoxY + 30);
+  doc.text("Descrizione lavoro", MARGIN_X, descY);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...GREY(70));
+  doc.setFontSize(10);
+  const desc =
+    `- Installazione e posa ${materialLabel} (${finishLabel}).\n` +
+    `- Incollaggio professionale su sottofondo idoneo.\n` +
+    `- Tagli, allineamenti e raccordi necessari.\n` +
+    `- Sigillatura, pulizia tecnica e finitura del lavoro a regola d’arte.`;
+  multiline(doc, desc, MARGIN_X, descY + 18, pageW - MARGIN_X * 2, 16);
 
-  const noteY = totalBoxY + 70;
+  // RIEPILOGO COSTI — ترويسة أوضح
+  const tableY = descY + 110;
+  doc.setFillColor(...BRAND.rgb);
+  rrect(doc, MARGIN_X, tableY - 22, 160, 20, 6, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("RIEPILOGO COSTI", MARGIN_X + 8, tableY - 7);
+
+  const rowH = 32; // أعلى لتوسيط النص
+  const tableX = MARGIN_X;
+  const tableW = pageW - MARGIN_X * 2;
+  const col1 = 0.62 * tableW;
+
+  // رأس الجدول (تباين أعلى + نص داكن جدًا)
+  doc.setFillColor(232, 232, 232);
+  rrect(doc, tableX, tableY + 12, tableW, rowH, 8, "F");
+  doc.setTextColor(...GREY(5)); // شبه أسود لتباين قوي
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  const headerBaseline = tableY + 12 + Math.floor(rowH / 2) + 4; // تقريبًا منتصف الصف
+  doc.text("Voce", tableX + 12, headerBaseline);
+  doc.text("Importo", tableX + tableW - 12, headerBaseline, {
+    align: "right",
+  } as any);
+
+  // Rows
+  const rows: Array<[string, string]> = [
+    [
+      `Posa ${materialLabel} (${finishLabel}) — ${quote.mq} mq × ${eur(
+        quote.pricePerMq
+      )}`,
+      eur(quote.baseTotal),
+    ],
+    ["IVA (22%)", eur(quote.vat)],
+  ];
+
+  let ry = tableY + 12 + rowH + 14;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...GREY(40));
+  rows.forEach(([label, val], i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(252, 252, 252);
+      rrect(doc, tableX, ry - (rowH - 14), tableW, rowH, 6, "F");
+    }
+    const wrapped = doc.splitTextToSize(label, col1 - 24) as string[];
+    // baseline للسطر الأول
+    const baseY = ry;
+    // النص يسار
+    doc.text(wrapped, tableX + 12, baseY);
+    // القيمة يمين
+    doc.text(val, tableX + tableW - 12, baseY, { align: "right" } as any);
+    // عدّل الارتفاع وفق عدد الأسطر
+    ry += Math.max(rowH, 14 * (wrapped.length || 1));
+  });
+
+  // Totale
+  const totalBoxY = ry + 10;
+  doc.setFillColor(...BRAND.rgb);
+  doc.setTextColor(255, 255, 255);
+  rrect(doc, tableX, totalBoxY, tableW, 54, 10, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("TOTALE INDICATIVO", tableX + 12, totalBoxY + 36);
+  doc.setFontSize(14);
+  doc.text(eur(quote.total), tableX + tableW - 12, totalBoxY + 36, {
+    align: "right",
+  } as any);
+
+  // Note
+  const noteY = totalBoxY + 78;
   doc.setTextColor(...GREY(110));
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text(
-    "Stima indicativa, soggetta a sopralluogo. Offerta non vincolante.",
-    40,
-    noteY
-  );
+  const note =
+    "Stima indicativa, soggetta a sopralluogo e verifica del sottofondo. Offerta non vincolante. " +
+    `Validità ${validityDays} giorni dalla data del preventivo.`;
+  multiline(doc, note, MARGIN_X, noteY, tableW, 13);
 
-  const footerY = 812;
-  line(doc, footerY - 20);
+  // Footer — داخل حدود الصفحة دائمًا
+  const footerY = pageH - BOTTOM_MARGIN; // 40pt من أسفل
+  line(doc, footerY - 18);
   doc.setTextColor(...GREY(110));
   doc.setFontSize(9);
-  const footer = [
+  const footerParts = [
     company.name,
     `P.IVA ${company.piva}`,
     company.address,
     [company.email, company.phone, company.website].filter(Boolean).join(" • "),
-  ]
-    .filter(Boolean)
-    .join(" • ");
-  doc.text(footer, 40, footerY);
+    company.iban ? `IBAN: ${company.iban}` : undefined,
+  ].filter(Boolean) as string[];
 
-  // save file
-  doc.save(`Preventivo_${client.name || "cliente"}_${quote.mq}mq.pdf`);
+  // لو التذييل طويل، هنقلل عرضه ونخليه يتلف داخل المساحة
+  const footerMaxWidth = tableW; // نفس عرض المحتوى
+  multiline(
+    doc,
+    footerParts.join(" • "),
+    MARGIN_X,
+    footerY,
+    footerMaxWidth,
+    12
+  );
+
+  // Save
+  const safeName = (client.name || "cliente").replace(
+    /[^\p{L}\p{N}\-_ ]/gu,
+    ""
+  );
+  doc.save(`Preventivo_${safeName}_${quote.mq}mq.pdf`);
 }

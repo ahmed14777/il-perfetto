@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-
+import SmartQuote from "@/sections/SmartQuote";
 import Hero from "@/sections/Hero";
 import Services from "@/sections/Services";
 import Portfolio from "@/sections/Portfolio";
@@ -45,7 +45,8 @@ export default function HomePage() {
       <Services />
       <Portfolio />
       <Gallery />
-      <Quote />
+      <SmartQuote />
+      {/* <Quote /> */}
       <Contact />
       <WhatsAppFab
         phone="393296895007"
