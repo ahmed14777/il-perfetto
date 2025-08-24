@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ألوان المشروع */
+:root {
+  --brand: #f07818;
+  --brand-light: #f7994c;
+  --brand-dark: #c45f12;
+}
+
+/* سلوك السكرول */
+html {
+  scroll-behavior: smooth; /* سكرول ناعم */
+  scroll-padding-top: 5.5rem; /* تعويض الهيدر الثابت */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 768px) {
+  html {
+    scroll-padding-top: 6.5rem;
+  }
+}
+
+/* الجسم */
+body {
+  @apply bg-neutral-950 text-neutral-100 antialiased leading-relaxed;
+  font-feature-settings: "liga", "kern";
+  font-variant-ligatures: common-ligatures;
+}
+
+/* Scrollbar أنيق */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--brand);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+/* روابط عامة */
+a {
+  @apply transition-colors duration-200;
+}
+
+/* نصوص */
+h1,
+h2,
+h3,
+h4 {
+  @apply font-bold tracking-tight;
+}
