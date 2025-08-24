@@ -1,42 +1,22 @@
 // data/images.ts
-import type { StaticImageData } from "next/image";
-
-import bagno1 from "@/public/images/bagno-1.jpg";
-import bagno from "@/public/images/bagno.jpg";
-import bagno2 from "@/public/images/bagno2.jpg";
-import bagno3 from "@/public/images/bagno3.jpg";
-import bagno4 from "@/public/images/bagno4.jpg";
-import bagno5 from "@/public/images/bagno5.jpg";
-import blue from "@/public/images/blue.jpg";
-import doccia from "@/public/images/docia.jpg";
-
-import parquet from "@/public/images/parquet.jpg";
-import pavimento from "@/public/images/pavimento.jpg";
-import pavimento2 from "@/public/images/pavimento2.jpg";
-import pavimento3 from "@/public/images/pavimento3.jpg";
-
-import piscina from "@/public/images/piscina.jpg";
-import scala from "@/public/images/scala.jpg";
-import scala2 from "@/public/images/scala-2.jpg";
-import scala4 from "@/public/images/scala4.jpg";
-
+// استخدم مسارات public مباشرة (بدون أي import لصور)
 export const IMAGES = {
-  bagno1,
-  bagno,
-  bagno2,
-  bagno3,
-  bagno4,
-  bagno5,
-  blue,
-  doccia,
-  parquet,
-  pavimento,
-  pavimento2,
-  pavimento3,
-  piscina,
-  scala,
-  scala2,
-  scala4,
-} satisfies Record<string, StaticImageData>;
+  bagno1: "/images/bagno-1.jpg",
+  bagno: "/images/bagno.jpg",
+  bagno2: "/images/bagno2.jpg",
+  bagno3: "/images/bagno3.jpg",
+  bagno4: "/images/bagno4.jpg",
+  bagno5: "/images/bagno5.jpg",
+  blue: "/images/blue.jpg",
+  doccia: "/images/docia.jpg",
+  parquet: "/images/parquet.jpg",
+  pavimento: "/images/pavimento.jpg",
+  pavimento2: "/images/pavimento2.jpg",
+  pavimento3: "/images/pavimento3.jpg",
+  piscina: "/images/piscina.jpg",
+  scala: "/images/scala.jpg",
+  scala2: "/images/scala-2.jpg",
+  scala4: "/images/scala4.jpg",
+} as const;
 
-export type Img = StaticImageData;
+export type Img = string; // ✅ أبسط حل يريح كل المستهلكين
