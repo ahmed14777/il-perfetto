@@ -6,6 +6,8 @@
       "dom.iterable",
       "esnext"
     ],
+    "baseUrl": ".",
+    "paths": { "@/*": ["./*"] },
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -15,11 +17,6 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
     "allowJs": true,
     "skipLibCheck": true,
     "plugins": [
