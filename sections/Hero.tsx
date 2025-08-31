@@ -41,9 +41,9 @@ export default function Hero() {
         >
           <motion.h1
             variants={fadeUp()}
-            className="text-3xl font-extrabold tracking-tight md:text-5xl"
+            className="text-2xl font-extrabold tracking-tight md:text-5xl"
           >
-            Pavimenti, Marmo, Ceramica e Parquet{" "}
+            Pavimenti, Rivestimenti, Marmo, Ceramica, Facciata, Parquet e PVC{" "}
             <span className="text-[var(--brand)]">su misura</span>.
           </motion.h1>
 
